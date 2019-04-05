@@ -1,0 +1,29 @@
+version: "3"
+services:
+
+  web:
+    image: "mcsim/yupe-openresty:latest"
+    restart: always
+    volumes:
+      - "./app/lua:/lua"
+      - "./app/html:/html"
+      - "./docker/source/openresty/conf.d:/etc/nginx/conf.d/templates"
+      - "./docker/source/openresty/auth/.htpasswd:/auth/.htpasswd"
+    expose:
+      - "80"
+    environment:
+      - "DOMAIN=${DOMAIN}"
+      - "HTML_PWD=/html"
+      - "LUA_CODE_CACHE=off"
+      - "RESOLVER=127.0.0.11"
+      - "INCLUDE_AUTH="
+      - "APP_PWD=/app"
+    networks:
+      - web
+    labels:
+      - "traefik.backend=openresty"
+      - "traefik.frontend.rule=Host:${DOMAIN}"
+    depends_on:
+      - node
+      - redirector_redis
+    command: /bin/bash -c "envsubst '$${DOMAIN} $${HTML_PWD} $${APP_PWD} $${LUA_CODE_CACHE} $${RESOLVER} $${INCLUDE_AUTH}' < /etc/nginx/conf.d/templates/tpl.redirector.conf > /etc/nginx/conf.d/default.conf && /usr/local/openresty/bin/openresty -g 'daemon off;'"
